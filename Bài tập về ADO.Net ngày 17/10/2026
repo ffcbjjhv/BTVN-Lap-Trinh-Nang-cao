@@ -1,0 +1,207 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
+using System.Text;
+using Microsoft.Data.SqlClient;
+namespace QuanLySinhVien.Data.Entity
+{
+    public class LopHoc
+    {
+        public string MaLop { get; set; }
+        public string TenLop { get; set; }
+
+        public LopHoc() { }
+
+        public LopHoc(string maLop, string tenLop)
+        {
+            MaLop = maLop;
+            TenLop = tenLop;
+        }
+    }
+
+    public class SinhVien
+    {
+        public string MaSV { get; set; }
+        public string HoTen { get; set; }
+        public string GioiTinh { get; set; }
+        public string NgaySinh { get; set; }
+        public string SoDienThoai { get; set; }
+        public string MaLop { get; set; }
+        public double Diem { get; set; }
+        public string Email { get; set; }
+
+        public SinhVien() { }
+
+        public SinhVien(string maSV, string hoTen, string gioiTinh, string ngaySinh, string soDienThoai, string maLop, double diem, string email)
+        {
+            MaSV = maSV;
+            HoTen = hoTen;
+            GioiTinh = gioiTinh;
+            NgaySinh = ngaySinh;
+            SoDienThoai = soDienThoai;
+            MaLop = maLop;
+            Diem = diem;
+            Email = email;
+        }
+    }
+}
+namespace QuanLySinhVien.Data.DAL
+{
+    using QuanLySinhVien.Data.Entity;
+
+    public class DataHelper
+    {
+        private SqlConnection con;
+        private string connectionString;
+
+        public DataHelper()
+        {
+            this.connectionString = @"Server=LAPTOP-6SN65NCS\HUECTMDB; Database=QLSV;Integrated Security=True; TrustServerCertificate=true";
+            con = new SqlConnection(connectionString);
+        }
+
+        public void OpenConnection()
+        {
+            try
+            {
+                if (con.State == ConnectionState.Closed)
+                {
+                    con.Open();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Lỗi mở kết nối CSDL: " + ex.Message);
+            }
+        }
+
+        public void CloseConnection()
+        {
+            try
+            {
+                if (con.State == ConnectionState.Open)
+                {
+                    con.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Lỗi đóng kết nối CSDL: " + ex.Message);
+            }
+        }
+
+        public void ExecuteNonQuery(string sqlExcuteQuery)
+        {
+            try
+            {
+                OpenConnection();
+                SqlCommand comand = new SqlCommand(sqlExcuteQuery, con);
+                comand.ExecuteNonQuery();
+                comand.Dispose();
+            }
+            catch (Exception exx)
+            {
+                throw new Exception("Lỗi thực thi câu lệnh SQL: " + exx.Message);
+            }
+            finally
+            {
+                CloseConnection();
+            }
+        }
+
+        public SqlDataReader ExcuteReader(string sqlSelect)
+        {
+            try
+            {
+                OpenConnection();
+                SqlCommand comand = new SqlCommand(sqlSelect, con);
+                SqlDataReader red = comand.ExecuteReader(CommandBehavior.CloseConnection);
+                return red;
+            }
+            catch (Exception exx)
+            {
+                CloseConnection();
+                throw new Exception("Lỗi đọc dữ liệu (ExcuteReader): " + exx.Message);
+            }
+        }
+
+        public DataTable GetDataTable(string sqlSelect)
+        {
+            try
+            {
+                SqlDataAdapter da = new SqlDataAdapter(sqlSelect, con);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+            catch (Exception exx)
+            {
+                throw new Exception("Lỗi lấy bảng dữ liệu (GetDataTable): " + exx.Message);
+            }
+            finally
+            {
+                CloseConnection();
+            }
+        }
+    }
+
+    public class LopHocDAO
+    {
+        private DataHelper dataHelper = new DataHelper();
+
+        public LopHocDAO() { }
+
+        public List<LopHoc> GetAllLopHoc()
+        {
+            try
+            {
+                List<LopHoc> lopHocs = new List<LopHoc>();
+                DataTable dt = dataHelper.GetDataTable("Select * from LopHoc");
+                foreach (DataRow dr in dt.Rows)
+                {
+                    LopHoc lh = new LopHoc();
+                    lh.MaLop = dr["MaLop"].ToString();
+                    lh.TenLop = dr["TenLop"].ToString();
+                    lopHocs.Add(lh);
+                }
+                return lopHocs;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Lỗi DAL (GetAllLopHoc): " + ex.Message);
+            }
+        }
+
+        public List<LopHoc> GetAllLopHoc1()
+        {
+            SqlDataReader dr = null;
+            try
+            {
+                List<LopHoc> lopHocs = new List<LopHoc>();
+                dr = dataHelper.ExcuteReader("Select * from LopHoc");
+                while (dr.Read())
+                {
+                    LopHoc lh = new LopHoc();
+                    lh.MaLop = dr["MaLop"].ToString();
+                    lh.TenLop = dr["TenLop"].ToString();
+                    lopHocs.Add(lh);
+                }
+                return lopHocs;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Lỗi DAL (GetAllLopHoc1): " + ex.Message);
+            }
+            finally
+            {
+                if (dr != null && !dr.IsClosed) dr.Close();
+                dataHelper.CloseConnection();
+            }
+        }
+
+        public LopHoc GetLopHocByMaLop(string maLop)
+        {
+            try
+            {
+                DataTable dt
